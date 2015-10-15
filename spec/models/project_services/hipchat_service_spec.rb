@@ -47,6 +47,14 @@ describe HipchatService do
       WebMock.stub_request(:post, api_url)
     end
 
+    it 'should test and return errors' do
+      allow(hipchat).to receive(:execute).and_raise(StandardError, 'no such room')
+      result = hipchat.test(push_sample_data)
+
+      expect(result[:success]).to be_falsey
+      expect(result[:result].to_s).to eq('no such room')
+    end
+
     it 'should use v1 if version is provided' do
       allow(hipchat).to receive(:api_version).and_return('v1')
       expect(HipChat::Client).to receive(:new).
@@ -79,7 +87,7 @@ describe HipchatService do
       it "should create a push message" do
         message = hipchat.send(:create_push_message, push_sample_data)
 
-        obj_attr = push_sample_data[:object_attributes]
+        push_sample_data[:object_attributes]
         branch = push_sample_data[:ref].gsub('refs/heads/', '')
         expect(message).to include("#{user.name} pushed to branch " \
             "<a href=\"#{project.web_url}/commits/#{branch}\">#{branch}</a> of " \
@@ -99,7 +107,7 @@ describe HipchatService do
       it "should create a tag push message" do
         message = hipchat.send(:create_push_message, push_sample_data)
 
-        obj_attr = push_sample_data[:object_attributes]
+        push_sample_data[:object_attributes]
         expect(message).to eq("#{user.name} pushed new tag " \
             "<a href=\"#{project.web_url}/commits/test\">test</a> to " \
             "<a href=\"#{project.web_url}\">#{project_name}</a>\n")

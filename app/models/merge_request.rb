@@ -19,6 +19,7 @@
 #  description       :text
 #  position          :integer          default(0)
 #  locked_at         :datetime
+#  updated_by_id     :integer
 #
 
 require Rails.root.join("app/models/commit")
@@ -226,7 +227,7 @@ class MergeRequest < ActiveRecord::Base
   end
 
   def work_in_progress?
-    title =~ /\A\[?WIP\]?:? /i
+    !!(title =~ /\A\[?WIP\]?:? /i)
   end
 
   def mergeable?
@@ -274,7 +275,8 @@ class MergeRequest < ActiveRecord::Base
     attrs = {
       source: source_project.hook_attrs,
       target: target_project.hook_attrs,
-      last_commit: nil
+      last_commit: nil,
+      work_in_progress: work_in_progress?
     }
 
     unless last_commit.nil?
@@ -432,8 +434,20 @@ class MergeRequest < ActiveRecord::Base
     target_project.repository.fetch_ref(
       source_project.repository.path_to_repo,
       "refs/heads/#{source_branch}",
-      "refs/merge-requests/#{iid}/head"
+      ref_path
     )
+  end
+
+  def ref_path
+    "refs/merge-requests/#{iid}/head"
+  end
+
+  def ref_is_fetched?
+    File.exists?(File.join(project.repository.path_to_repo, ref_path))
+  end
+
+  def ensure_ref_fetched
+    fetch_ref unless ref_is_fetched?
   end
 
   def in_locked_state

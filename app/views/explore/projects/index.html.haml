@@ -1,12 +1,12 @@
-- page_title "Projects"
-.clearfix
+- page_title    "Projects"
+- header_title  "Projects", root_path
+
+- if current_user
+  = render 'dashboard/projects_head'
+- else
+  = render 'explore/head'
+
+.gray-content-block.clearfix
   = render 'filter'
-
-%hr
-.public-projects
-  %ul.bordered-list.top-list
-    = render @projects
-    - unless @projects.present?
-      .nothing-here-block No public projects
-
-  = paginate @projects, theme: "gitlab"
+= render 'projects', projects: @projects
+= paginate @projects, theme: "gitlab"

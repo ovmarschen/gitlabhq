@@ -46,9 +46,11 @@ module API
     mount Services
     mount Files
     mount Commits
+    mount CommitStatus
     mount Namespaces
     mount Branches
     mount Labels
     mount Settings
+    mount Keys
   end
 end

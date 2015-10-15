@@ -1,3 +1,5 @@
+require 'gitlab/markdown'
+
 module Gitlab
   module Markdown
     # HTML filter that replaces user or group references with links.
@@ -49,7 +51,7 @@ module Gitlab
       private
 
       def urls
-        Rails.application.routes.url_helpers
+        Gitlab::Application.routes.url_helpers
       end
 
       def link_class

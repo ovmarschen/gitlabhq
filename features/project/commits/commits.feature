@@ -16,6 +16,13 @@ Feature: Project Commits
     Then I see commit info
     And I see side-by-side diff button
 
+  Scenario: I browse commit with ci from list
+    Given commit has ci status
+    And I click on commit link
+    Then I see commit ci info
+    And I click status link
+    Then I see builds list
+
   Scenario: I browse commit with side-by-side diff view
     Given I click on commit link
     And I click side-by-side diff button
@@ -41,6 +48,7 @@ Feature: Project Commits
   Scenario: I browse big commit
     Given I visit big commit page
     Then I see big commit warning
+    And I see "Reload with full diff" link
 
   Scenario: I browse a commit with an image
     Given I visit a commit with an image that changed

@@ -1,20 +1,18 @@
 - page_title "Members"
+- header_title group_title(@group, "Members", group_group_members_path(@group))
 - show_roles = should_user_see_group_roles?(current_user, @group)
 
-%h3.page-title
-  Group members
 - if show_roles
   %p.light
     Members of group have access to all group projects.
     Read more about permissions
     %strong= link_to "here", help_page_path("permissions", "permissions"), class: "vlink"
 
-%hr
 
 .clearfix.js-toggle-container
   = form_tag group_group_members_path(@group), method: :get, class: 'form-inline member-search-form'  do
     .form-group
-      = search_field_tag :search, params[:search], { placeholder: 'Find existing member by name', class: 'form-control search-text-input' }
+      = search_field_tag :search, params[:search], { placeholder: 'Find existing member by name', class: 'form-control search-text-input', spellcheck: false }
     = button_tag 'Search', class: 'btn'
 
   - if current_user && current_user.can?(:admin_group_member, @group)

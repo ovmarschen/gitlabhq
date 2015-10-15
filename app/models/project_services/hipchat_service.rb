@@ -60,6 +60,16 @@ class HipchatService < Service
     gate[room].send('GitLab', message, message_options)
   end
 
+  def test(data)
+    begin
+      result = execute(data)
+    rescue StandardError => error
+      return { success: false, result: error }
+    end
+
+    { success: true, result: result }
+  end
+
   private
 
   def gate
@@ -75,17 +85,16 @@ class HipchatService < Service
   def create_message(data)
     object_kind = data[:object_kind]
 
-    message = \
-      case object_kind
-      when "push", "tag_push"
-        create_push_message(data)
-      when "issue"
-        create_issue_message(data) unless is_update?(data)
-      when "merge_request"
-        create_merge_request_message(data) unless is_update?(data)
-      when "note"
-        create_note_message(data)
-      end
+    case object_kind
+    when "push", "tag_push"
+      create_push_message(data)
+    when "issue"
+      create_issue_message(data) unless is_update?(data)
+    when "merge_request"
+      create_merge_request_message(data) unless is_update?(data)
+    when "note"
+      create_note_message(data)
+    end
   end
 
   def create_push_message(push)
@@ -157,8 +166,6 @@ class HipchatService < Service
     obj_attr = data[:object_attributes]
     obj_attr = HashWithIndifferentAccess.new(obj_attr)
     merge_request_id = obj_attr[:iid]
-    source_branch = obj_attr[:source_branch]
-    target_branch = obj_attr[:target_branch]
     state = obj_attr[:state]
     description = obj_attr[:description]
     title = obj_attr[:title]
@@ -183,8 +190,6 @@ class HipchatService < Service
   def create_note_message(data)
     data = HashWithIndifferentAccess.new(data)
     user_name = data[:user][:name]
-
-    repo_attr = HashWithIndifferentAccess.new(data[:repository])
 
     obj_attr = HashWithIndifferentAccess.new(data[:object_attributes])
     note = obj_attr[:note]

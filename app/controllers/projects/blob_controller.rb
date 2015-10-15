@@ -8,7 +8,7 @@ class Projects::BlobController < Projects::ApplicationController
 
   before_action :require_non_empty_project, except: [:new, :create]
   before_action :authorize_download_code!
-  before_action :authorize_push_code!, only: [:destroy]
+  before_action :authorize_push_code!, only: [:destroy, :create]
   before_action :assign_blob_vars
   before_action :commit, except: [:new, :create]
   before_action :blob, except: [:new, :create]
@@ -25,11 +25,17 @@ class Projects::BlobController < Projects::ApplicationController
     result = Files::CreateService.new(@project, current_user, @commit_params).execute
 
     if result[:status] == :success
-      flash[:notice] = "Your changes have been successfully committed"
-      redirect_to namespace_project_blob_path(@project.namespace, @project, File.join(@target_branch, @file_path))
+      flash[:notice] = "The changes have been successfully committed"
+      respond_to do |format|
+        format.html { redirect_to namespace_project_blob_path(@project.namespace, @project, File.join(@target_branch, @file_path)) }
+        format.json { render json: { message: "success", filePath: namespace_project_blob_path(@project.namespace, @project, File.join(@target_branch, @file_path)) } }
+      end
     else
       flash[:alert] = result[:message]
-      render :new
+      respond_to do |format|
+        format.html { render :new }
+        format.json { render json: { message: "failed", filePath: namespace_project_blob_path(@project.namespace, @project, @id) } }
+      end
     end
   end
 
@@ -45,10 +51,16 @@ class Projects::BlobController < Projects::ApplicationController
 
     if result[:status] == :success
       flash[:notice] = "Your changes have been successfully committed"
-      redirect_to after_edit_path
+      respond_to do |format|
+        format.html { redirect_to after_edit_path }
+        format.json { render json: { message: "success", filePath: after_edit_path } }
+      end
     else
       flash[:alert] = result[:message]
-      render :edit
+      respond_to do |format|
+        format.html { render :edit }
+        format.json { render json: { message: "failed", filePath: namespace_project_new_blob_path(@project.namespace, @project, @id) } }
+      end
     end
   end
 
@@ -142,14 +154,22 @@ class Projects::BlobController < Projects::ApplicationController
 
   def editor_variables
     @current_branch = @ref
-    @target_branch = (sanitized_new_branch_name || @ref)
+    @target_branch = params[:new_branch].present? ? sanitized_new_branch_name : @ref
 
     @file_path =
       if action_name.to_s == 'create'
+        if params[:file].present?
+          params[:file_name] = params[:file].original_filename
+        end
         File.join(@path, File.basename(params[:file_name]))
       else
         @path
       end
+
+    if params[:file].present?
+      params[:content] = Base64.encode64(params[:file].read)
+      params[:encoding] = 'base64'
+    end
 
     @commit_params = {
       file_path: @file_path,

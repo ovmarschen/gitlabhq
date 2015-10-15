@@ -51,6 +51,11 @@ module SharedProject
     visit namespace_project_path(project.namespace, project)
   end
 
+  step 'I visit project "Shop" activity page' do
+    project = Project.find_by(name: 'Shop')
+    visit namespace_project_path(project.namespace, project)
+  end
+
   step 'project "Shop" has push event' do
     @project = Project.find_by(name: "Shop")
 
@@ -90,6 +95,29 @@ module SharedProject
 
   def current_project
     @project ||= Project.first
+  end
+
+  # ----------------------------------------
+  # Visibility of archived project
+  # ----------------------------------------
+
+  step 'archived project "Archive"' do
+    create :project, :public, archived: true, name: 'Archive'
+  end
+
+  step 'I should not see project "Archive"' do
+    project = Project.find_by(name: "Archive")
+    expect(page).not_to have_content project.name_with_namespace
+  end
+
+  step 'I should see project "Archive"' do
+    project = Project.find_by(name: "Archive")
+    expect(page).to have_content project.name_with_namespace
+  end
+
+  step 'project "Archive" has comments' do
+    project = Project.find_by(name: "Archive")
+    2.times { create(:note_on_issue, project: project) }
   end
 
   # ----------------------------------------
@@ -167,5 +195,15 @@ module SharedProject
     create(:label, project: project, title: 'bug')
     create(:label, project: project, title: 'feature')
     create(:label, project: project, title: 'enhancement')
+  end
+
+  step 'project "Shop" has CI enabled' do
+    project = Project.find_by(name: "Shop")
+    project.enable_ci
+  end
+
+  step 'project "Shop" has CI build' do
+    project = Project.find_by(name: "Shop")
+    create :ci_commit, gl_project: project, sha: project.commit.sha
   end
 end

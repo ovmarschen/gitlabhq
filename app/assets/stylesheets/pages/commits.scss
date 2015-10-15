@@ -1,5 +1,6 @@
 .commits-compare-switch{
-  @extend .btn;
+  @include btn-default;
+  @include btn-white;
   background: image-url("switch_icon.png") no-repeat center center;
   text-indent: -9999px;
   float: left;
@@ -52,7 +53,7 @@ li.commit {
     }
 
     .commit-row-message {
-      color: #444;
+      color: $gl-link-color;
 
       &:hover {
         text-decoration: underline;
@@ -88,12 +89,12 @@ li.commit {
   }
 
   .commit-row-info {
-    color: #777;
+    color: $gl-gray;
     line-height: 24px;
     font-size: 13px;
 
     a {
-      color: #777;
+      color: $gl-gray;
     }
 
     .committed_ago {

@@ -9,24 +9,24 @@
   = f.label :title, class: 'control-label' do
     %strong= 'Title *'
   .col-sm-10
-    = f.text_field :title, maxlength: 255, autofocus: true,
-        class: 'form-control pad js-gfm-input', required: true
+    = f.text_field :title, maxlength: 255, autofocus: true, autocomplete: 'off',
+        class: 'form-control pad js-gfm-input js-quick-submit', required: true
 
     - if issuable.is_a?(MergeRequest)
       %p.help-block
         - if issuable.work_in_progress?
           Remove the <code>WIP</code> prefix from the title to allow this
-          <strong>Work In Progress</strong> merge request to be accepted when it's ready.
+          <strong>Work In Progress</strong> merge request to be merged when it's ready.
         - else
           Start the title with <code>[WIP]</code> or <code>WIP:</code> to prevent a
-          <strong>Work In Progress</strong> merge request from being accepted before it's ready.
+          <strong>Work In Progress</strong> merge request from being merged before it's ready.
 .form-group.issuable-description
   = f.label :description, 'Description', class: 'control-label'
   .col-sm-10
 
-    = render layout: 'projects/md_preview', locals: { preview_class: "wiki", referenced_users: true } do
+    = render layout: 'projects/md_preview', locals: { preview_class: "md-preview", referenced_users: true } do
       = render 'projects/zen', f: f, attr: :description,
-                               classes: 'description form-control'
+                               classes: 'description form-control js-quick-submit'
       .col-sm-12.hint
         .pull-left
           Parsed with
@@ -38,7 +38,7 @@
       .clearfix
       .error-alert
   %hr
-- if can?(current_user, :"admin_#{issuable.to_ability_name}", @project)
+- if can?(current_user, :"admin_#{issuable.to_ability_name}", issuable.project)
   .form-group
     .issue-assignee
       = f.label :assignee_id, class: 'control-label' do
@@ -47,7 +47,8 @@
       .col-sm-10
         = users_select_tag("#{issuable.class.model_name.param_key}[assignee_id]",
             placeholder: 'Select a user', class: 'custom-form-control', null_user: true,
-            selected: issuable.assignee_id, project: @target_project || @project)
+            selected: issuable.assignee_id, project: @target_project || @project,
+            first_user: true, current_user: true)
         &nbsp;
         = link_to 'Assign to me', '#', class: 'btn assign-to-me-link'
   .form-group

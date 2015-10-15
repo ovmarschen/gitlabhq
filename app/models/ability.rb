@@ -135,6 +135,8 @@ class Ability
 
     def project_report_rules
       project_guest_rules + [
+        :create_commit_status,
+        :read_commit_statuses,
         :download_code,
         :fork_project,
         :create_project_snippet,
@@ -149,6 +151,7 @@ class Ability
         :admin_merge_request,
         :create_merge_request,
         :create_wiki,
+        :manage_builds,
         :push_code
       ]
     end

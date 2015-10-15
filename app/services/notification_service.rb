@@ -107,12 +107,17 @@ class NotificationService
 
     recipients = []
 
+    mentioned_users = note.mentioned_users
+    mentioned_users.select! do |user|
+      user.can?(:read_project, note.project)
+    end
+
     # Add all users participating in the thread (author, assignee, comment authors)
     participants = 
       if target.respond_to?(:participants)
         target.participants(note.author)
       else
-        note.mentioned_users
+        mentioned_users
       end
     recipients = recipients.concat(participants)
 
@@ -120,8 +125,8 @@ class NotificationService
     recipients = add_project_watchers(recipients, note.project)
 
     # Reject users with Mention notification level, except those mentioned in _this_ note.
-    recipients = reject_mention_users(recipients - note.mentioned_users, note.project)
-    recipients = recipients + note.mentioned_users
+    recipients = reject_mention_users(recipients - mentioned_users, note.project)
+    recipients = recipients + mentioned_users
 
     recipients = reject_muted_users(recipients, note.project)
 
@@ -178,12 +183,12 @@ class NotificationService
     mailer.group_access_granted_email(group_member.id)
   end
 
-  def project_was_moved(project)
+  def project_was_moved(project, old_path_with_namespace)
     recipients = project.team.members
     recipients = reject_muted_users(recipients, project)
 
     recipients.each do |recipient|
-      mailer.project_was_moved_email(project.id, recipient.id)
+      mailer.project_was_moved_email(project.id, recipient.id, old_path_with_namespace)
     end
   end
 

@@ -39,6 +39,10 @@ module SharedPaths
     visit edit_group_path(Group.find_by(name: "Owned"))
   end
 
+  step 'I visit group "Owned" projects page' do
+    visit projects_group_path(Group.find_by(name: "Owned"))
+  end
+
   step 'I visit group "Guest" page' do
     visit group_path(Group.find_by(name: "Guest"))
   end
@@ -64,7 +68,11 @@ module SharedPaths
   # ----------------------------------------
 
   step 'I visit dashboard page' do
-    visit dashboard_path
+    visit dashboard_projects_path
+  end
+
+  step 'I visit dashboard activity page' do
+    visit activity_dashboard_path
   end
 
   step 'I visit dashboard projects page' do
@@ -452,7 +460,7 @@ module SharedPaths
   end
 
   step 'I visit snippets page' do
-    visit snippets_path
+    visit explore_snippets_path
   end
 
   step 'I visit new snippet page' do

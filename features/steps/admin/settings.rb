@@ -6,7 +6,8 @@ class Spinach::Features::AdminSettings < Spinach::FeatureSteps
 
   step 'I modify settings and save form' do
     uncheck 'Gravatar enabled'
-    fill_in 'Home page url', with: 'https://about.gitlab.com/'
+    fill_in 'Home page URL', with: 'https://about.gitlab.com/'
+    fill_in 'Help page text', with: 'Example text'
     click_button 'Save'
   end
 

@@ -2,6 +2,7 @@ namespace :gitlab do
   desc "GitLab | Check the configuration of GitLab and its environment"
   task check: %w{gitlab:gitlab_shell:check
                  gitlab:sidekiq:check
+                 gitlab:incoming_email:check
                  gitlab:ldap:check
                  gitlab:app:check}
 
@@ -22,6 +23,7 @@ namespace :gitlab do
       check_gitlab_config_not_outdated
       check_log_writable
       check_tmp_writable
+      check_uploads
       check_init_script_exists
       check_init_script_up_to_date
       check_projects_have_namespace
@@ -277,16 +279,70 @@ namespace :gitlab do
       end
     end
 
+    def check_uploads
+      print "Uploads directory setup correctly? ... "
+
+      unless File.directory?(Rails.root.join('public/uploads'))
+        puts "no".red
+        try_fixing_it(
+          "sudo -u #{gitlab_user} mkdir -m 750 #{Rails.root}/public/uploads"
+        )
+        for_more_information(
+          see_installation_guide_section "GitLab"
+        )
+        fix_and_rerun
+        return
+      end
+
+      upload_path = File.realpath(Rails.root.join('public/uploads'))
+      upload_path_tmp = File.join(upload_path, 'tmp')
+
+      if File.stat(upload_path).mode == 040750
+        unless Dir.exists?(upload_path_tmp)
+          puts 'skipped (no tmp uploads folder yet)'.magenta
+          return
+        end
+
+        # if tmp upload dir has incorrect permissions, assume others do as well
+        if File.stat(upload_path_tmp).mode == 040755 && File.owned?(upload_path_tmp) # verify drwxr-xr-x permissions
+          puts "yes".green
+        else
+          puts "no".red
+          try_fixing_it(
+            "sudo chown -R #{gitlab_user} #{upload_path}",
+            "sudo find #{upload_path} -type f -exec chmod 0644 {} \\;",
+            "sudo find #{upload_path} -type d -not -path #{upload_path} -exec chmod 0755 {} \\;"
+          )
+          for_more_information(
+            see_installation_guide_section "GitLab"
+          )
+          fix_and_rerun
+        end
+      else
+        puts "no".red
+        try_fixing_it(
+          "sudo chmod 0750 #{upload_path}",
+        )
+        for_more_information(
+          see_installation_guide_section "GitLab"
+        )
+        fix_and_rerun
+      end
+    end
+
     def check_redis_version
-      print "Redis version >= 2.0.0? ... "
+      min_redis_version = "2.4.0"
+      print "Redis version >= #{min_redis_version}? ... "
 
       redis_version = run(%W(redis-cli --version))
-      if redis_version.try(:match, /redis-cli 2.\d.\d/) || redis_version.try(:match, /redis-cli 3.\d.\d/)
+      redis_version = redis_version.try(:match, /redis-cli (.*)/)
+      if redis_version &&
+          (Gem::Version.new(redis_version[1]) > Gem::Version.new(min_redis_version))
         puts "yes".green
       else
         puts "no".red
         try_fixing_it(
-          "Update your redis server to a version >= 2.0.0"
+          "Update your redis server to a version >= #{min_redis_version}"
         )
         for_more_information(
           "gitlab-public-wiki/wiki/Trouble-Shooting-Guide in section sidekiq"
@@ -435,7 +491,7 @@ namespace :gitlab do
         else
           puts "wrong or missing hooks".red
           try_fixing_it(
-            sudo_gitlab("#{gitlab_shell_path}/bin/create-hooks"),
+            sudo_gitlab("#{File.join(gitlab_shell_path, 'bin/create-hooks')}"),
             'Check the hooks_path in config/gitlab.yml',
             'Check your gitlab-shell installation'
           )
@@ -577,6 +633,179 @@ namespace :gitlab do
     end
   end
 
+
+  namespace :incoming_email do
+    desc "GitLab | Check the configuration of Reply by email"
+    task check: :environment  do
+      warn_user_is_not_gitlab
+      start_checking "Reply by email"
+
+      if Gitlab.config.incoming_email.enabled
+        check_address_formatted_correctly
+        check_mail_room_config_exists
+        check_imap_authentication
+
+        if Rails.env.production?
+          check_initd_configured_correctly
+          check_mail_room_running
+        else
+          check_foreman_configured_correctly
+        end
+      else
+        puts 'Reply by email is disabled in config/gitlab.yml'
+      end
+
+      finished_checking "Reply by email"
+    end
+
+
+    # Checks
+    ########################
+
+    def check_address_formatted_correctly
+      print "Address formatted correctly? ... "
+
+      if Gitlab::IncomingEmail.address_formatted_correctly?
+        puts "yes".green
+      else
+        puts "no".red
+        try_fixing_it(
+          "Make sure that the address in config/gitlab.yml includes the '%{key}' placeholder."
+        )
+        fix_and_rerun
+      end
+    end
+
+    def check_initd_configured_correctly
+      print "Init.d configured correctly? ... "
+
+      if omnibus_gitlab?
+        puts 'skipped (omnibus-gitlab has no init script)'.magenta
+        return
+      end
+
+      path = "/etc/default/gitlab"
+
+      if File.exist?(path) && File.read(path).include?("mail_room_enabled=true")
+        puts "yes".green
+      else
+        puts "no".red
+        try_fixing_it(
+          "Enable mail_room in the init.d configuration."
+        )
+        for_more_information(
+          "doc/incoming_email/README.md"
+        )
+        fix_and_rerun
+      end
+    end
+
+    def check_foreman_configured_correctly
+      print "Foreman configured correctly? ... "
+
+      path = Rails.root.join("Procfile")
+
+      if File.exist?(path) && File.read(path) =~ /^mail_room:/
+        puts "yes".green
+      else
+        puts "no".red
+        try_fixing_it(
+          "Enable mail_room in your Procfile."
+        )
+        for_more_information(
+          "doc/incoming_email/README.md"
+        )
+        fix_and_rerun
+      end
+    end
+
+    def check_mail_room_running
+      print "MailRoom running? ... "
+
+      path = "/etc/default/gitlab"
+
+      unless File.exist?(path) && File.read(path).include?("mail_room_enabled=true")
+        puts "can't check because of previous errors".magenta
+        return
+      end
+
+      if mail_room_running?
+        puts "yes".green
+      else
+        puts "no".red
+        try_fixing_it(
+          sudo_gitlab("RAILS_ENV=production bin/mail_room start")
+        )
+        for_more_information(
+          see_installation_guide_section("Install Init Script"),
+          "see log/mail_room.log for possible errors"
+        )
+        fix_and_rerun
+      end
+    end
+
+    def check_mail_room_config_exists
+      print "MailRoom config exists? ... "
+
+      mail_room_config_file = Rails.root.join("config", "mail_room.yml")
+
+      if File.exists?(mail_room_config_file)
+        puts "yes".green
+      else
+        puts "no".red
+        try_fixing_it(
+          "Copy config/mail_room.yml.example to config/mail_room.yml",
+          "Check that the information in config/mail_room.yml is correct"
+        )
+        for_more_information(
+          "doc/incoming_email/README.md"
+        )
+        fix_and_rerun
+      end
+    end
+
+    def check_imap_authentication
+      print "IMAP server credentials are correct? ... "
+
+      mail_room_config_file = Rails.root.join("config", "mail_room.yml")
+
+      unless File.exists?(mail_room_config_file)
+        puts "can't check because of previous errors".magenta
+        return
+      end
+
+      config = YAML.load_file(mail_room_config_file)[:mailboxes].first rescue nil
+
+      if config
+        begin
+          imap = Net::IMAP.new(config[:host], port: config[:port], ssl: config[:ssl])
+          imap.login(config[:email], config[:password])
+          connected = true
+        rescue
+          connected = false
+        end
+      end
+
+      if connected
+        puts "yes".green
+      else
+        puts "no".red
+        try_fixing_it(
+          "Check that the information in config/mail_room.yml is correct"
+        )
+        for_more_information(
+          "doc/incoming_email/README.md"
+        )
+        fix_and_rerun
+      end
+    end
+
+    def mail_room_running?
+      ps_ux, _ = Gitlab::Popen.popen(%W(ps ux))
+      ps_ux.include?("mail_room")
+    end
+  end
+
   namespace :ldap do
     task :check, [:limit] => :environment do |t, args|
       # Only show up to 100 results because LDAP directories can be very big.
@@ -693,7 +922,7 @@ namespace :gitlab do
   end
 
   def check_ruby_version
-    required_version = Gitlab::VersionInfo.new(2, 0, 0)
+    required_version = Gitlab::VersionInfo.new(2, 1, 0)
     current_version = Gitlab::VersionInfo.parse(run(%W(ruby --version)))
 
     print "Ruby version >= #{required_version} ? ... "

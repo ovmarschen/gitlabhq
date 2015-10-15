@@ -14,7 +14,7 @@ module Gitlab
           # LDAP distinguished name is case-insensitive
           identity = ::Identity.
             where(provider: provider).
-            where('lower(extern_uid) = ?', uid.downcase).last
+            where('lower(extern_uid) = ?', uid.mb_chars.downcase.to_s).last
           identity && identity.user
         end
       end
@@ -35,7 +35,7 @@ module Gitlab
       end
 
       def find_by_email
-        ::User.find_by(email: auth_hash.email)
+        ::User.find_by(email: auth_hash.email.downcase)
       end
 
       def update_user_attributes
@@ -44,9 +44,14 @@ module Gitlab
         gl_user.skip_reconfirmation!
         gl_user.email = auth_hash.email
 
-        # Build new identity only if we dont have have same one
-        gl_user.identities.find_or_initialize_by(provider: auth_hash.provider,
-                                                 extern_uid: auth_hash.uid)
+        # find_or_initialize_by doesn't update `gl_user.identities`, and isn't autosaved.
+        identity = gl_user.identities.find { |identity|  identity.provider == auth_hash.provider }
+        identity ||= gl_user.identities.build(provider: auth_hash.provider)
+        
+        # For a new user set extern_uid to the LDAP DN
+        # For an existing user with matching email but changed DN, update the DN.
+        # For an existing user with no change in DN, this line changes nothing.
+        identity.extern_uid = auth_hash.uid
 
         gl_user
       end
@@ -65,6 +70,10 @@ module Gitlab
 
       def ldap_config
         Gitlab::LDAP::Config.new(auth_hash.provider)
+      end
+
+      def auth_hash=(auth_hash)
+        @auth_hash = Gitlab::LDAP::AuthHash.new(auth_hash)
       end
     end
   end

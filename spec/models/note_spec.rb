@@ -15,6 +15,7 @@
 #  noteable_id   :integer
 #  system        :boolean          default(FALSE), not null
 #  st_diff       :text
+#  updated_by_id :integer
 #
 
 require 'spec_helper'
@@ -197,5 +198,11 @@ describe Note do
     let(:issue) { create :issue, project: project }
     let(:backref_text) { issue.gfm_reference }
     let(:set_mentionable_text) { ->(txt) { subject.note = txt } }
+  end
+
+  describe :search do
+    let!(:note) { create(:note, note: "WoW") }
+
+    it { expect(Note.search('wow')).to include(note) }
   end
 end

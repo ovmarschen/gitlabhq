@@ -5,7 +5,9 @@ module Gitlab
 
       def initialize(project)
         @project = project
-        @client = Client.new(project.creator.github_access_token)
+        import_data = project.import_data.try(:data)
+        github_session = import_data["github_session"] if import_data
+        @client = Client.new(github_session["github_access_token"])
         @formatter = Gitlab::ImportFormatter.new
       end
 
@@ -16,7 +18,8 @@ module Gitlab
                                                   direction: :asc).each do |issue|
           if issue.pull_request.nil?
 
-            body = @formatter.author_line(issue.user.login, issue.body)
+            body = @formatter.author_line(issue.user.login)
+            body += issue.body
 
             if issue.comments > 0
               body += @formatter.comments_header

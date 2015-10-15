@@ -4,7 +4,7 @@ module Gitlab
       key = :current_application_settings
 
       RequestStore.store[key] ||= begin
-        if ActiveRecord::Base.connected? && ActiveRecord::Base.connection.table_exists?('application_settings')
+        if connect_to_db?
           ApplicationSetting.current || ApplicationSetting.create_from_defaults
         else
           fake_application_settings
@@ -22,8 +22,21 @@ module Gitlab
         sign_in_text: Settings.extra['sign_in_text'],
         restricted_visibility_levels: Settings.gitlab['restricted_visibility_levels'],
         max_attachment_size: Settings.gitlab['max_attachment_size'],
-        session_expire_delay: Settings.gitlab['session_expire_delay']
+        session_expire_delay: Settings.gitlab['session_expire_delay'],
+        import_sources: Settings.gitlab['import_sources']
       )
+    end
+
+    private
+
+    def connect_to_db?
+      use_db = if ENV['USE_DB'] == "false"
+                 false
+               else
+                 true
+               end
+
+      use_db && ActiveRecord::Base.connection.active? && ActiveRecord::Base.connection.table_exists?('application_settings')
     end
   end
 end

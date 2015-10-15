@@ -1,3 +1,4 @@
+# coding: utf-8
 class Spinach::Features::ProjectSourceBrowseFiles < Spinach::FeatureSteps
   include SharedAuthentication
   include SharedProject
@@ -70,7 +71,7 @@ class Spinach::Features::ProjectSourceBrowseFiles < Spinach::FeatureSteps
   end
 
   step 'I fill the new branch name' do
-    fill_in :new_branch, with: 'new_branch_name'
+    fill_in :new_branch, with: 'new_branch_name', visible: true
   end
 
   step 'I fill the new file name with an illegal name' do
@@ -78,7 +79,7 @@ class Spinach::Features::ProjectSourceBrowseFiles < Spinach::FeatureSteps
   end
 
   step 'I fill the commit message' do
-    fill_in :commit_message, with: 'Not yet a commit message.'
+    fill_in :commit_message, with: 'Not yet a commit message.', visible: true
   end
 
   step 'I click link "Diff"' do
@@ -89,6 +90,10 @@ class Spinach::Features::ProjectSourceBrowseFiles < Spinach::FeatureSteps
     click_button 'Commit Changes'
   end
 
+  step 'I click on "Create directory"' do
+    click_button 'Create directory'
+  end
+
   step 'I click on "Remove"' do
     click_button 'Remove'
   end
@@ -97,17 +102,81 @@ class Spinach::Features::ProjectSourceBrowseFiles < Spinach::FeatureSteps
     click_button 'Remove file'
   end
 
+  step 'I click on "Replace"' do
+    click_button  "Replace"
+  end
+
+  step 'I click on "Replace file"' do
+    click_button  'Replace file'
+  end
+
   step 'I see diff' do
     expect(page).to have_css '.line_holder.new'
   end
 
-  step 'I click on "new file" link in repo' do
-    click_link 'new-file-link'
+  step 'I click on "New file" link in repo' do
+    find('.add-to-tree').click
+    click_link 'Create file'
+  end
+
+  step 'I click on "Upload file" link in repo' do
+    find('.add-to-tree').click
+    click_link 'Upload file'
+  end
+
+  step 'I click on "New directory" link in repo' do
+    find('.add-to-tree').click
+    click_link 'New directory'
+  end
+
+  step 'I fill the new directory name' do
+    fill_in :dir_name, with: new_dir_name
+  end
+
+  step 'I fill an existing directory name' do
+    fill_in :dir_name, with: 'files'
   end
 
   step 'I can see new file page' do
-    expect(page).to have_content "New file"
+    expect(page).to have_content "new file"
     expect(page).to have_content "Commit message"
+  end
+
+  step 'I click on "Upload file"' do
+    click_button 'Upload file'
+  end
+
+  step 'I can see the new commit message' do
+    expect(page).to have_content "New upload commit message"
+  end
+
+  step 'I upload a new text file' do
+    drop_in_dropzone test_text_file
+  end
+
+  step 'I fill the upload file commit message' do
+    page.within('#modal-upload-blob') do
+      fill_in :commit_message, with: 'New upload commit message'
+    end
+  end
+
+  step 'I replace it with a text file' do
+    drop_in_dropzone test_text_file
+  end
+
+  step 'I fill the replace file commit message' do
+    page.within('#modal-upload-blob') do
+      fill_in :commit_message, with: 'Replacement file commit message'
+    end
+  end
+
+  step 'I can see the replacement commit message' do
+    expect(page).to have_content "Replacement file commit message"
+  end
+
+  step 'I can see the new text file' do
+    expect(page).to have_content "Lorem ipsum dolor sit amet"
+    expect(page).to have_content "Sed ut perspiciatis unde omnis"
   end
 
   step 'I click on files directory' do
@@ -174,8 +243,28 @@ class Spinach::Features::ProjectSourceBrowseFiles < Spinach::FeatureSteps
       @project.namespace, @project, 'new_branch_name/' + new_file_name))
   end
 
+  step 'I am redirected to the uploaded file on new branch' do
+    expect(current_path).to eq(namespace_project_blob_path(
+      @project.namespace, @project,
+      'new_branch_name/' + File.basename(test_text_file)))
+  end
+
+  step 'I am redirected to the new directory' do
+    expect(current_path).to eq(namespace_project_tree_path(
+      @project.namespace, @project, 'new_branch_name/' + new_dir_name))
+  end
+
+  step 'I am redirected to the root directory' do
+    expect(current_path).to eq(namespace_project_tree_path(
+      @project.namespace, @project, 'master/'))
+  end
+
   step "I don't see the permalink link" do
     expect(page).not_to have_link('permalink')
+  end
+
+  step 'I see "Unable to create directory"' do
+    expect(page).to have_content('Directory already exists')
   end
 
   step 'I see a commit error message' do
@@ -231,5 +320,36 @@ class Spinach::Features::ProjectSourceBrowseFiles < Spinach::FeatureSteps
   # not a filename present at root of the seed repository.
   def new_file_name
     'not_a_file.md'
+  end
+
+  # Constant value that is a valid directory and
+  # not a directory present at root of the seed repository.
+  def new_dir_name
+    'new_dir/subdir'
+  end
+
+  def drop_in_dropzone(file_path)
+    # Generate a fake input selector
+    page.execute_script <<-JS
+      var fakeFileInput = window.$('<input/>').attr(
+        {id: 'fakeFileInput', type: 'file'}
+      ).appendTo('body');
+    JS
+    # Attach the file to the fake input selector with Capybara
+    attach_file("fakeFileInput", file_path)
+    # Add the file to a fileList array and trigger the fake drop event
+    page.execute_script <<-JS
+      var fileList = [$('#fakeFileInput')[0].files[0]];
+      var e = jQuery.Event('drop', { dataTransfer : { files : fileList } });
+      $('.dropzone')[0].dropzone.listeners[0].events.drop(e);
+    JS
+  end
+
+  def test_text_file
+    File.join(Rails.root, 'spec', 'fixtures', 'doc_sample.txt')
+  end
+
+  def test_image_file
+    File.join(Rails.root, 'spec', 'fixtures', 'banana_sample.gif')
   end
 end

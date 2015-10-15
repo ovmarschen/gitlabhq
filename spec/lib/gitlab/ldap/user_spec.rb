@@ -11,7 +11,18 @@ describe Gitlab::LDAP::User do
     }
   end
   let(:auth_hash) do
-    double(uid: 'my-uid', provider: 'ldapmain', info: double(info))
+    OmniAuth::AuthHash.new(uid: 'my-uid', provider: 'ldapmain', info: info)
+  end
+  let(:ldap_user_upper_case) { Gitlab::LDAP::User.new(auth_hash_upper_case) }
+  let(:info_upper_case) do
+    {
+      name: 'John',
+      email: 'John@Example.com', # Email address has upper case chars
+      nickname: 'john'
+    }
+  end
+  let(:auth_hash_upper_case) do
+    OmniAuth::AuthHash.new(uid: 'my-uid', provider: 'ldapmain', info: info_upper_case)
   end
 
   describe :changed? do
@@ -45,6 +56,38 @@ describe Gitlab::LDAP::User do
       existing_user.reload
       expect(existing_user.ldap_identity.extern_uid).to eql 'my-uid'
       expect(existing_user.ldap_identity.provider).to eql 'ldapmain'
+    end
+
+    it 'connects to existing ldap user if the extern_uid changes' do
+      existing_user = create(:omniauth_user, email: 'john@example.com', extern_uid: 'old-uid', provider: 'ldapmain')
+      expect{ ldap_user.save }.not_to change{ User.count }
+
+      existing_user.reload
+      expect(existing_user.ldap_identity.extern_uid).to eql 'my-uid'
+      expect(existing_user.ldap_identity.provider).to eql 'ldapmain'
+      expect(existing_user.id).to eql ldap_user.gl_user.id
+    end
+
+    it 'connects to existing ldap user if the extern_uid changes and email address has upper case characters' do
+      existing_user = create(:omniauth_user, email: 'john@example.com', extern_uid: 'old-uid', provider: 'ldapmain')
+      expect{ ldap_user_upper_case.save }.not_to change{ User.count }
+
+      existing_user.reload
+      expect(existing_user.ldap_identity.extern_uid).to eql 'my-uid'
+      expect(existing_user.ldap_identity.provider).to eql 'ldapmain'
+      expect(existing_user.id).to eql ldap_user.gl_user.id
+    end
+
+    it 'maintains an identity per provider' do
+      existing_user = create(:omniauth_user, email: 'john@example.com', provider: 'twitter')
+      expect(existing_user.identities.count).to eql(1)
+
+      ldap_user.save
+      expect(ldap_user.gl_user.identities.count).to eql(2)
+
+      # Expect that find_by provider only returns a single instance of an identity and not an Enumerable
+      expect(ldap_user.gl_user.identities.find_by(provider: 'twitter')).to be_instance_of Identity
+      expect(ldap_user.gl_user.identities.find_by(provider: auth_hash.provider)).to be_instance_of Identity
     end
 
     it "creates a new user if not found" do

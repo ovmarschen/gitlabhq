@@ -21,12 +21,12 @@ Feature: Project Source Browse Files
     Then I should see raw file content
 
   Scenario: I can create file
-    Given I click on "new file" link in repo
+    Given I click on "New file" link in repo
     Then I can see new file page
 
   @javascript
   Scenario: I can create and commit file
-    Given I click on "new file" link in repo
+    Given I click on "New file" link in repo
     And I edit code
     And I fill the new file name
     And I fill the commit message
@@ -35,8 +35,30 @@ Feature: Project Source Browse Files
     And I should see its new content
 
   @javascript
+  Scenario: I can upload file and commit
+    Given I click on "Upload file" link in repo
+    And I upload a new text file
+    And I fill the upload file commit message
+    And I fill the new branch name
+    And I click on "Upload file"
+    Then I can see the new text file
+    And I am redirected to the uploaded file on new branch
+    And I can see the new commit message
+
+  @javascript
+  Scenario: I can replace file and commit
+    Given I click on ".gitignore" file in repo
+    And I see the ".gitignore"
+    And I click on "Replace"
+    And I replace it with a text file
+    And I fill the replace file commit message
+    And I click on "Replace file"
+    Then I can see the new text file
+    And I can see the replacement commit message
+
+  @javascript
   Scenario: I can create and commit file and specify new branch
-    Given I click on "new file" link in repo
+    Given I click on "New file" link in repo
     And I edit code
     And I fill the new file name
     And I fill the commit message
@@ -60,7 +82,7 @@ Feature: Project Source Browse Files
 
   @javascript
   Scenario: If I enter an illegal file name I see an error message
-    Given I click on "new file" link in repo
+    Given I click on "New file" link in repo
     And I fill the new file name with an illegal name
     And I edit code
     And I fill the commit message
@@ -114,6 +136,24 @@ Feature: Project Source Browse Files
     # Test fails because carriage returns are added to the file.
     Then I am on the ".gitignore" edit file page
     And I see a commit error message
+
+  @javascript
+  Scenario: I can create directory in repo
+    When I click on "New directory" link in repo
+    And I fill the new directory name
+    And I fill the commit message
+    And I fill the new branch name
+    And I click on "Create directory"
+    Then I am redirected to the new directory
+
+  @javascript
+  Scenario: I attempt to create an existing directory
+    When I click on "New directory" link in repo
+    And I fill an existing directory name
+    And I fill the commit message
+    And I click on "Create directory"
+    Then I see "Unable to create directory"
+    And I am redirected to the root directory
 
   @javascript
   Scenario: I can see editing preview

@@ -46,6 +46,16 @@ describe Service do
       describe :can_test do
         it { expect(@testable).to eq(true) }
       end
+
+      describe :test do
+        let(:data) { 'test' }
+
+        it 'test runs execute' do
+          expect(@service).to receive(:execute).with(data)
+
+          @service.test(data)
+        end
+      end
     end
 
     describe "With commits" do
@@ -91,6 +101,29 @@ describe Service do
           expect(service.api_key).to eq('123456789')
         end
       end
+    end
+  end
+
+  describe "#prop_updated?" do
+    let(:service) do
+      BambooService.create(
+        project: create(:project),
+        properties: {
+          bamboo_url: 'http://gitlab.com',
+          username: 'mic',
+          password: "password"
+        }
+      )
+    end
+
+    it "returns false" do
+      service.username = "key_changed"
+      expect(service.prop_updated?(:bamboo_url)).to be_falsy
+    end
+
+    it "returns true" do
+      service.bamboo_url = "http://other.com"
+      expect(service.prop_updated?(:bamboo_url)).to be_truthy
     end
   end
 end

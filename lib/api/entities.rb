@@ -8,7 +8,7 @@ module API
       expose :id, :state, :avatar_url
 
       expose :web_url do |user, options|
-        Rails.application.routes.url_helpers.user_url(user)
+        Gitlab::Application.routes.url_helpers.user_url(user)
       end
     end
 
@@ -45,7 +45,7 @@ module API
 
     class ProjectHook < Hook
       expose :project_id, :push_events
-      expose :issues_events, :merge_requests_events, :tag_push_events
+      expose :issues_events, :merge_requests_events, :tag_push_events, :note_events, :enable_ssl_verification
     end
 
     class ForkedFromProject < Grape::Entity
@@ -81,7 +81,7 @@ module API
       expose :avatar_url
 
       expose :web_url do |group, options|
-        Rails.application.routes.url_helpers.group_url(group)
+        Gitlab::Application.routes.url_helpers.group_url(group)
       end
     end
 
@@ -149,6 +149,7 @@ module API
 
     class RepoCommitDetail < RepoCommit
       expose :parent_ids, :committed_date, :authored_date
+      expose :status
     end
 
     class ProjectSnippet < Grape::Entity
@@ -199,12 +200,19 @@ module API
       expose :id, :title, :key, :created_at
     end
 
+    class SSHKeyWithUser < SSHKey
+      expose :user, using: Entities::UserFull
+    end
+
     class Note < Grape::Entity
       expose :id
       expose :note, as: :body
       expose :attachment_identifier, as: :attachment
       expose :author, using: Entities::UserBasic
       expose :created_at
+      expose :system?, as: :system
+      expose :upvote?, as: :upvote
+      expose :downvote?, as: :downvote
     end
 
     class MRNote < Grape::Entity
@@ -217,6 +225,13 @@ module API
       expose(:path) { |note| note.diff_file_name }
       expose(:line) { |note| note.diff_new_line }
       expose(:line_type) { |note| note.diff_line_type }
+      expose :author, using: Entities::UserBasic
+      expose :created_at
+    end
+
+    class CommitStatus < Grape::Entity
+      expose :id, :sha, :ref, :status, :name, :target_url, :description,
+             :created_at, :started_at, :finished_at
       expose :author, using: Entities::UserBasic
     end
 

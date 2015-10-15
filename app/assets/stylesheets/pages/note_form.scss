@@ -65,16 +65,19 @@
 
 .note-image-attach {
   @extend .col-md-4;
-  @extend .thumbnail;
   margin-left: 45px;
   float: none;
 }
 
 .common-note-form {
   margin: 0;
-  background: #F9F9F9;
-  padding: 5px;
-  border: 1px solid #DDD;
+  background: #F7F8FA;
+  padding: $gl-padding;
+  margin-left: -$gl-padding;
+  margin-right: -$gl-padding;
+  border-right: 1px solid #ECEEF1;
+  border-top: 1px solid #ECEEF1;
+  margin-bottom: -$gl-padding;
 }
 
 .note-form-actions {
@@ -105,7 +108,7 @@
 
 .note-edit-form {
   display: none;
-  font-size: 13px;
+  font-size: 15px;
 
   .form-actions {
     padding-left: 20px;
@@ -142,9 +145,9 @@
   }
 
   .discussion-reply-holder {
-    background: #f9f9f9;
+    background: $background-color;
     padding: 10px 15px;
-    border-top: 1px solid #DDD;
+    border-top: 1px solid $border-color;
   }
 }
 
@@ -164,8 +167,8 @@
 .comment-hints {
   color: #999;
   background: #FFF;
-  padding: 5px;
+  padding: 7px;
   margin-top: -11px;
-  border: 1px solid #DDD;
+  border: 1px solid $border-color;
   font-size: 13px;
 }

@@ -43,24 +43,22 @@ module ProjectsHelper
     end
   end
 
-  def project_title(project)
-    if project.group
-      content_tag :span do
-        link_to(
-          simple_sanitize(project.group.name), group_path(project.group)
-        ) + ' / ' +
-          link_to(simple_sanitize(project.name),
-                  project_path(project))
+  def project_title(project, name = nil, url = nil)
+    namespace_link =
+      if project.group
+        link_to(simple_sanitize(project.group.name), group_path(project.group))
+      else
+        owner = project.namespace.owner
+        link_to(simple_sanitize(owner.name), user_path(owner))
       end
-    else
-      owner = project.namespace.owner
-      content_tag :span do
-        link_to(
-          simple_sanitize(owner.name), user_path(owner)
-        ) + ' / ' +
-          link_to(simple_sanitize(project.name),
-                  project_path(project))
-      end
+
+    project_link = link_to(simple_sanitize(project.name), project_path(project))
+
+    full_title = namespace_link + ' / ' + project_link
+    full_title += ' &middot; '.html_safe + link_to(simple_sanitize(name), url) if name
+
+    content_tag :span do
+      full_title
     end
   end
 
@@ -158,8 +156,8 @@ module ProjectsHelper
     end
   end
 
-  def repository_size(project = nil)
-    "#{(project || @project).repository_size} MB"
+  def repository_size(project = @project)
+    "#{project.repository_size} MB"
   rescue
     # In order to prevent 500 error
     # when application cannot allocate memory
@@ -231,37 +229,20 @@ module ProjectsHelper
     end
   end
 
+  def readme_path(project)
+    filename_path(project, :readme)
+  end
+
   def changelog_path(project)
-    if project && changelog = project.repository.changelog
-      namespace_project_blob_path(
-        project.namespace,
-        project,
-        tree_join(project.default_branch,
-                  changelog.name)
-      )
-    end
+    filename_path(project, :changelog)
   end
 
   def license_path(project)
-    if project && license = project.repository.license
-      namespace_project_blob_path(
-        project.namespace,
-        project,
-        tree_join(project.default_branch,
-                  license.name)
-      )
-    end
+    filename_path(project, :license)
   end
 
   def version_path(project)
-    if project && version = project.repository.version
-      namespace_project_blob_path(
-        project.namespace,
-        project,
-        tree_join(project.default_branch,
-                  version.name)
-      )
-    end
+    filename_path(project, :version)
   end
 
   def hidden_pass_url(original_url)
@@ -315,7 +296,7 @@ module ProjectsHelper
 
   def readme_cache_key
     sha = @project.commit.try(:sha) || 'nil'
-    [@project.id, sha, "readme"].join('-')
+    [@project.path_with_namespace, sha, "readme"].join('-')
   end
 
   def round_commit_count(project)
@@ -329,6 +310,23 @@ module ProjectsHelper
       '1000+'
     else
       count
+    end
+  end
+
+  def current_ref
+    @ref || @repository.try(:root_ref)
+  end
+
+  private
+
+  def filename_path(project, filename)
+    if project && blob = project.repository.send(filename)
+      namespace_project_blob_path(
+          project.namespace,
+          project,
+          tree_join(project.default_branch,
+                    blob.name)
+      )
     end
   end
 end

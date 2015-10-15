@@ -3,11 +3,11 @@ require 'spec_helper'
 describe Gitlab::OAuth::AuthHash do
   let(:auth_hash) do
     Gitlab::OAuth::AuthHash.new(
-      double({
+      OmniAuth::AuthHash.new(
         provider: provider_ascii,
         uid: uid_ascii,
-        info: double(info_hash)
-      })
+        info: info_hash
+      )
     )
   end
 
@@ -89,10 +89,6 @@ describe Gitlab::OAuth::AuthHash do
 
     it 'forces utf8 encoding on name' do
       expect(auth_hash.name.encoding).to eql Encoding::UTF_8
-    end
-
-    it 'forces utf8 encoding on full_name' do
-      expect(auth_hash.full_name.encoding).to eql Encoding::UTF_8
     end
 
     it 'forces utf8 encoding on username' do

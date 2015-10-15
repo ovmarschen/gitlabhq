@@ -1,8 +1,9 @@
 # Monthly Release
 
-NOTE: This is a guide used by the GitLab B.V. developers.
+NOTE: This is a guide used by the GitLab the company to release GitLab.
+As an end user you do not need to use this guide.
 
-It starts 7 working days before the release.
+The process starts 7 working days before the release.
 The release manager doesn't have to perform all the work but must ensure someone is assigned.
 The current release manager must schedule the appointment of the next release manager.
 The new release manager should create overall issue to track the progress.
@@ -73,20 +74,19 @@ Xth: (1 working day before the 22nd)
 - [ ] Update GitLab.com with the latest RC (#LINK)
 - [ ] Update ci.gitLab.com with the latest RC (#LINK)
 
-22nd before 12AM CET:
+22nd before 1200 CET:
 
-Release before 12AM CET / 3AM PST, to make sure the majority of our users
+Release before 1200 CET / 2AM PST, to make sure the majority of our users
 get the new version on the 22nd and there is sufficient time in the European
 workday to quickly fix any issues.
 
 - [ ] Merge CE stable into EE stable (#LINK)
 - [ ] Create the 'x.y.0' tag with the [release tools](https://dev.gitlab.org/gitlab/release-tools) (#LINK)
 - [ ] Create the 'x.y.0' version on version.gitlab.com
-- [ ] Try to do before 11AM CET: Create and push omnibus tags for x.y.0 (will auto-release the packages) (#LINK)
-- [ ] Try to do before 12AM CET: Publish the release blog post (#LINK)
+- [ ] Try to do before 1100 CET: Create and push omnibus tags for x.y.0 (will auto-release the packages) (#LINK)
+- [ ] Try to do before 1200 CET: Publish the release blog post (#LINK)
 - [ ] Tweet about the release (blog post) (#LINK)
-- [ ] Schedule a second tweet of the release announcement with the same text at 6PM CET / 9AM PST
-
+- [ ] Schedule a second tweet of the release announcement with the same text at 1800 CET / 8AM PST
 ```
 
 - - -
@@ -156,6 +156,7 @@ Tweet about the RC release:
 1. Also check the CI changelog
 1. Add a proposed tweet text to the blog post WIP MR description.
 1. Create a WIP MR for the blog post
+1. Make sure merge request title starts with `WIP` so it can not be accidently merged until ready.
 1. Ask Dmitriy (or a team member with OS X) to add screenshots to the WIP MR.
 1. Decide with core team who will be the MVP user.
 1. Create WIP MR for adding MVP to MVP page on website
@@ -163,7 +164,7 @@ Tweet about the RC release:
 1. Create a merge request on [GitLab.com](https://gitlab.com/gitlab-com/www-gitlab-com/tree/master)
 1. Assign to one reviewer who will fix spelling issues by editing the branch (either with a git client or by using the online editor)
 1. Comment to the reviewer: '@person Please mention the whole team as soon as you are done (3 workdays before release at the latest)'
-1. Create a complete copy of the [release blog template](https://gitlab.com/gitlab-com/www-gitlab-com/blob/master/doc/release_blog_template.md) for the release after this.
+1. Create a new merge request with complete copy of the [release blog template](https://gitlab.com/gitlab-com/www-gitlab-com/blob/master/doc/release_blog_template.md) for the next release using the branch name `release-x-x-x`.
 
 ## Create CE, EE, CI stable versions
 
@@ -193,7 +194,7 @@ This can happen before tagging because Omnibus uses tags in its own repo and SHA
 ## Update GitLab.com with the stable version
 
 - Deploy the package (should not need downtime because of the small difference with RC1)
-- Deploy the package for ci.gitlab.com
+- Deploy the package for gitlab.com/ci
 
 ## Release CE, EE and CI
 

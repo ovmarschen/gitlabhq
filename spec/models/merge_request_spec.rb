@@ -19,6 +19,7 @@
 #  description       :text
 #  position          :integer          default(0)
 #  locked_at         :datetime
+#  updated_by_id     :integer
 #
 
 require 'spec_helper'
@@ -161,6 +162,17 @@ describe MergeRequest do
 
     it "doesn't detect WIP by default" do
       expect(subject).not_to be_work_in_progress
+    end
+  end
+
+  describe "#hook_attrs" do
+    it "has all the required keys" do
+      attrs = subject.hook_attrs
+      attrs = attrs.to_h
+      expect(attrs).to include(:source)
+      expect(attrs).to include(:target)
+      expect(attrs).to include(:last_commit)
+      expect(attrs).to include(:work_in_progress)
     end
   end
 
